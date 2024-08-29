@@ -10,6 +10,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 @Service
 public class AuthenticationService {
@@ -35,20 +36,15 @@ public class AuthenticationService {
         user.setLastName(request.getLastName());
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-
         user.setRole(request.getRole());
-
 //        System.out.println(user.getRole());
-
         user = repository.save(user);
 
         String jwt = JwtService.generateToken(user);
         saveUserToken(jwt, user);
 
         return new AuthenticationResponse(jwt);
-
     }
-
 
 
     public AuthenticationResponse authenticate(User request){
@@ -61,10 +57,23 @@ public class AuthenticationService {
 
         User user = repository.findByUsername(request.getUsername()).orElseThrow();
         String token = jwtService.generateToken(user);
+
+        revokeAllTokenByUser(user);
+
         saveUserToken(token, user);
 
         return new AuthenticationResponse(token);
 
+    }
+
+    private void revokeAllTokenByUser(User user) {
+        List<Token> validTokenListByUser = tokenRepository.findAllTokenByUser(user.getId());
+        if (!validTokenListByUser.isEmpty()){
+            validTokenListByUser.forEach(t ->{   //lambda expression
+                t.setLoggedOut(true);
+            } );
+        }
+        tokenRepository.saveAll(validTokenListByUser);
     }
 
     private void saveUserToken(String jwt, User user) {
