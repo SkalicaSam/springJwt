@@ -1,7 +1,9 @@
 package com.example.springJwt.service;
 
 import com.example.springJwt.model.AuthenticationResponse;
+import com.example.springJwt.model.Token;
 import com.example.springJwt.model.User;
+import com.example.springJwt.repository.TokenRepository;
 import com.example.springJwt.repository.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -17,11 +19,14 @@ public class AuthenticationService {
 
     private final AuthenticationManager authenticationManager;
 
-    public AuthenticationService(UserRepository repository, PasswordEncoder passwordEncoder, JwtService jwtService, AuthenticationManager authenticationManager) {
+    private final TokenRepository tokenRepository;
+
+    public AuthenticationService(UserRepository repository, PasswordEncoder passwordEncoder, JwtService jwtService, AuthenticationManager authenticationManager, TokenRepository tokenRepository) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.tokenRepository = tokenRepository;
     }
 
     public AuthenticationResponse register (User request){
@@ -37,11 +42,14 @@ public class AuthenticationService {
 
         user = repository.save(user);
 
-        String token = JwtService.generateToken(user);
+        String jwt = JwtService.generateToken(user);
+        saveUserToken(jwt, user);
 
-        return new AuthenticationResponse(token);
+        return new AuthenticationResponse(jwt);
 
     }
+
+
 
     public AuthenticationResponse authenticate(User request){
         authenticationManager.authenticate(
@@ -53,9 +61,20 @@ public class AuthenticationService {
 
         User user = repository.findByUsername(request.getUsername()).orElseThrow();
         String token = jwtService.generateToken(user);
+        saveUserToken(token, user);
 
         return new AuthenticationResponse(token);
 
+    }
+
+    private void saveUserToken(String jwt, User user) {
+        //save the generated token.
+        // select lines of code, click Left and Refactor / Extract method.
+        Token token = new Token();
+        token.setToken(jwt);
+        token.setLoggedOut(false);
+        token.setUser(user);
+        tokenRepository.save(token);
     }
 
 }

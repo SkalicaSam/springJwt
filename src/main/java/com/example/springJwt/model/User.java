@@ -26,6 +26,16 @@ public class User implements UserDetails {  // click on word -> implements,
     private String password;
     @Enumerated(value = EnumType.STRING)
     Role role;       // create enum 'Role'
+    @OneToMany(mappedBy = "user")    // then generate getter and setter for this feald
+    private List<Token> tokens;
+
+    public List<Token> getTokens() {
+        return tokens;
+    }
+
+    public void setTokens(List<Token> tokens) {
+        this.tokens = tokens;
+    }
 
     public Integer getId() {
         return id;
